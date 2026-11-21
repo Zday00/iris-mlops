@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Artefacts ML : versionnés via tags/registry, pas dans Git
+models/*
+!models/.gitkeep
+
+# Environnement / IDE
+.env
+.vscode/
+.idea/
+.DS_Store
