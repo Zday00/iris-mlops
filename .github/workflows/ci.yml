@@ -1,0 +1,46 @@
+name: CI MLOps
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Installer les dépendances
+        run: |
+          pip install -r training/requirements.txt
+          pip install -r backend/requirements.txt
+      - name: Tests training
+        run: pytest -q training/tests
+      - name: Tests API
+        run: cd backend && pytest -q tests
+
+  docker:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build + lancement de la stack
+        run: |
+          export GIT_COMMIT=${GITHUB_SHA::7}
+          docker compose up -d --build
+          sleep 15
+          docker compose ps -a
+      - name: Smoke test de l'API
+        run: |
+          curl -sf http://localhost:8000/health
+          curl -sf -X POST http://localhost:8000/predict \
+            -H "Content-Type: application/json" \
+            -d '{"sepal_length":5.1,"sepal_width":3.5,"petal_length":1.4,"petal_width":0.2}'
+          curl -sf http://localhost:8080/api/health
+      - name: Arrêt
+        if: always()
+        run: docker compose down
