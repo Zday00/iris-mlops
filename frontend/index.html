@@ -7,59 +7,98 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header>
-    <h1>Iris Classifier</h1>
-    <p class="sub">Frontend → FastAPI → modèle scikit-learn (Docker)</p>
-    <div id="status" class="status">Connexion à l'API…</div>
+  <header class="masthead">
+    <div>
+      <h1>Iris Classifier</h1>
+      <p class="lede">Décrivez une fleur d'iris avec 4 mesures : le modèle devine son espèce en direct et explique pourquoi.</p>
+    </div>
+    <div id="status" class="status" role="status">
+      <span class="dot" aria-hidden="true"></span><span id="status-text">Connexion à l'API…</span>
+    </div>
   </header>
 
-  <main>
-    <section class="card">
-      <h2>1. Saisir les features</h2>
-      <div class="presets">
-        <span>Exemples :</span>
-        <button type="button" data-preset="setosa">Setosa</button>
-        <button type="button" data-preset="versicolor">Versicolor</button>
-        <button type="button" data-preset="virginica">Virginica</button>
+  <main class="layout">
+    <!-- Colonne gauche : la fleur et ses mesures -->
+    <section class="panel measures" aria-labelledby="h-measures">
+      <h2 id="h-measures">Mesures de la fleur</h2>
+
+      <figure class="flower">
+        <svg id="flower" viewBox="0 -8 340 220" role="img"
+             aria-label="Schéma d'un sépale et d'un pétale, dessinés à l'échelle des mesures saisies">
+          <g class="part" data-part="sepal">
+            <path id="sepal-shape" class="leaf sepal" d="" />
+            <line id="sepal-len-line" class="dim" data-dim="sepal_length" />
+            <line id="sepal-wid-line" class="dim" data-dim="sepal_width" />
+            <text id="sepal-len-txt" class="dim-txt" data-dim="sepal_length"></text>
+            <text id="sepal-wid-txt" class="dim-txt" data-dim="sepal_width" text-anchor="middle"></text>
+            <text x="95" y="196" class="part-name" text-anchor="middle">Sépale</text>
+          </g>
+          <g class="part" data-part="petal">
+            <path id="petal-shape" class="leaf petal" d="" />
+            <line id="petal-len-line" class="dim" data-dim="petal_length" />
+            <line id="petal-wid-line" class="dim" data-dim="petal_width" />
+            <text id="petal-len-txt" class="dim-txt" data-dim="petal_length"></text>
+            <text id="petal-wid-txt" class="dim-txt" data-dim="petal_width" text-anchor="middle"></text>
+            <text x="245" y="196" class="part-name" text-anchor="middle">Pétale</text>
+          </g>
+        </svg>
+        <figcaption>Le <strong>sépale</strong> est la grande pièce extérieure qui retombe ; le <strong>pétale</strong> est la pièce intérieure, plus étroite et dressée. Le dessin suit vos mesures.</figcaption>
+      </figure>
+
+      <div class="presets" role="group" aria-label="Charger un exemple">
+        <span class="presets-label">Exemples</span>
+        <button type="button" data-preset="setosa"><i class="swatch s0"></i>Setosa</button>
+        <button type="button" data-preset="versicolor"><i class="swatch s1"></i>Versicolor</button>
+        <button type="button" data-preset="virginica"><i class="swatch s2"></i>Virginica</button>
       </div>
-      <form id="form">
-        <div class="field">
-          <label for="sepal_length">Longueur du sépale (cm)</label>
-          <input type="range" id="sepal_length_r" min="4" max="8" step="0.1" value="5.1" />
-          <input type="number" id="sepal_length" min="0" max="10" step="0.1" value="5.1" required />
-        </div>
-        <div class="field">
-          <label for="sepal_width">Largeur du sépale (cm)</label>
-          <input type="range" id="sepal_width_r" min="2" max="4.5" step="0.1" value="3.5" />
-          <input type="number" id="sepal_width" min="0" max="10" step="0.1" value="3.5" required />
-        </div>
-        <div class="field">
-          <label for="petal_length">Longueur du pétale (cm)</label>
-          <input type="range" id="petal_length_r" min="1" max="7" step="0.1" value="1.4" />
-          <input type="number" id="petal_length" min="0" max="10" step="0.1" value="1.4" required />
-        </div>
-        <div class="field">
-          <label for="petal_width">Largeur du pétale (cm)</label>
-          <input type="range" id="petal_width_r" min="0.1" max="2.5" step="0.1" value="0.2" />
-          <input type="number" id="petal_width" min="0" max="10" step="0.1" value="0.2" required />
-        </div>
-        <button type="submit" class="primary">Prédire l'espèce</button>
+
+      <form id="form" novalidate>
+        <div id="fields"></div>
+        <p class="hint">
+          Les bandes colorées sous chaque curseur montrent les valeurs observées pour chaque espèce.
+          La prédiction se met à jour dès que vous bougez un curseur.
+        </p>
       </form>
     </section>
 
-    <section class="card">
-      <h2>2. Résultat</h2>
-      <div id="result" class="result muted">Aucune prédiction pour l'instant.</div>
-      <div id="probas"></div>
-    </section>
+    <!-- Colonne droite : la réponse du modèle -->
+    <div class="side">
+      <section class="panel result-panel" aria-labelledby="h-result" aria-live="polite">
+        <h2 id="h-result">Prédiction</h2>
+        <div id="result" class="result idle">
+          <p class="species-line"><span id="species">—</span></p>
+          <p id="confidence" class="confidence">En attente de l'API…</p>
+        </div>
+        <div id="probas" class="probas"></div>
+        <p id="explain" class="explain"></p>
+        <div id="error" class="error" hidden>
+          <svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.25"/><path d="M10 5.5v5.5M10 13.6v.4"/></svg>
+          <div><p id="error-title" class="error-title"></p><p id="error-detail" class="error-detail"></p></div>
+        </div>
+      </section>
 
-    <section class="card">
-      <h2>3. Modèle en production</h2>
-      <dl id="model-info" class="info muted"><dt>—</dt><dd>chargement…</dd></dl>
-    </section>
+      <section class="panel" aria-labelledby="h-plot">
+        <h2 id="h-plot">Où se situe votre fleur ?</h2>
+        <p class="panel-sub">Les 150 fleurs du jeu d'entraînement, selon la taille de leur pétale. Cliquez un point pour charger ses mesures.</p>
+        <svg id="plot" viewBox="0 0 420 270" role="img"
+             aria-label="Nuage de points : longueur du pétale en abscisse, largeur du pétale en ordonnée, une couleur par espèce"></svg>
+        <ul class="legend">
+          <li><i class="swatch s0"></i>setosa</li>
+          <li><i class="swatch s1"></i>versicolor</li>
+          <li><i class="swatch s2"></i>virginica</li>
+          <li><i class="you" aria-hidden="true"></i>votre fleur</li>
+        </ul>
+      </section>
+
+      <section class="panel" aria-labelledby="h-model">
+        <h2 id="h-model">Modèle en production</h2>
+        <dl id="model-info" class="info"><dt>Chargement…</dt><dd></dd></dl>
+      </section>
+    </div>
   </main>
 
-  <footer>TP MLOps · WSL2 · Git · Docker</footer>
+  <footer>TP MLOps · navigateur → Nginx → API FastAPI → modèle scikit-learn · WSL2 · Git · Docker</footer>
+  <script src="iris-data.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
