@@ -1,0 +1,43 @@
+name: iris-mlops
+
+services:
+  # 1) Entraîne le modèle puis s'arrête (job "one-shot")
+  training:
+    build:
+      context: ./training
+      args:
+        GIT_COMMIT: ${GIT_COMMIT:-unknown}
+    image: iris-mlops/training:${TAG:-latest}
+    environment:
+      MODEL_DIR: /models
+      N_ESTIMATORS: ${N_ESTIMATORS:-100}
+      MAX_DEPTH: ${MAX_DEPTH:-5}
+      MIN_ACCURACY: ${MIN_ACCURACY:-0.90}
+    volumes:
+      - ./models:/models
+
+  # 2) API FastAPI : démarre seulement si le training a réussi
+  backend:
+    build: ./backend
+    image: iris-mlops/backend:${TAG:-latest}
+    environment:
+      MODEL_DIR: /models
+    volumes:
+      - ./models:/models:ro
+    ports:
+      - "8000:8000"
+    depends_on:
+      training:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # 3) Frontend Nginx : démarre quand l'API est "healthy"
+  frontend:
+    build: ./frontend
+    image: iris-mlops/frontend:${TAG:-latest}
+    ports:
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
